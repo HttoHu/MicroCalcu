@@ -3,6 +3,11 @@
 #include <map>
 namespace mcalcu
 {
+
+	std::map<NumberKind, NumberType> number_type_table
+	{
+		{INTEGER,NumberType(1,"int")},{FRACTION,NumberType(2,"frac")}
+	};
 	namespace op
 	{
 
@@ -28,9 +33,9 @@ namespace mcalcu
 		}
 		NumObj fraction_add(const NumObj& lhs, const NumObj& rhs)
 		{
-			auto demo = lhs * rhs;
 			auto lhs_num = std::static_pointer_cast<Fraction> (lhs)->numerator;
 			auto rhs_num = std::static_pointer_cast<Fraction> (rhs)->numerator;
+			auto demo = lhs_num * rhs_num;
 			auto lhs_deno = std::static_pointer_cast<Fraction> (lhs)->denominator;
 			auto rhs_deno = std::static_pointer_cast<Fraction> (rhs)->denominator;
 			auto num = lhs_num * rhs_deno + rhs_num * lhs_deno;
@@ -38,9 +43,9 @@ namespace mcalcu
 		}
 		NumObj fraction_sub(const NumObj& lhs, const NumObj& rhs)
 		{
-			auto demo = lhs * rhs;
 			auto lhs_num = std::static_pointer_cast<Fraction> (lhs)->numerator;
 			auto rhs_num = std::static_pointer_cast<Fraction> (rhs)->numerator;
+			auto demo = lhs_num * rhs_num;
 			auto lhs_deno = std::static_pointer_cast<Fraction> (lhs)->denominator;
 			auto rhs_deno = std::static_pointer_cast<Fraction> (rhs)->denominator;
 			auto num = lhs_num * rhs_deno - rhs_num * lhs_deno;
@@ -52,7 +57,7 @@ namespace mcalcu
 			auto rhs_num = std::static_pointer_cast<Fraction> (rhs)->numerator;
 			auto lhs_deno = std::static_pointer_cast<Fraction> (lhs)->denominator;
 			auto rhs_deno = std::static_pointer_cast<Fraction> (rhs)->denominator;
-			return Fraction::from(lhs_num*rhs_num, lhs_deno*lhs_deno)->simplify();
+			return Fraction::from(lhs_num*rhs_num, rhs_deno*lhs_deno)->simplify();
 		}
 		NumObj fraction_div(const NumObj& lhs, const NumObj& rhs)
 		{
@@ -95,6 +100,18 @@ namespace mcalcu
 		}
 		else
 		{
+			NumObj nobj;
+			auto lhs_type = number_type_table[lhs->get_number_kind()], rhs_type = number_type_table[rhs->get_number_kind()];
+			if (lhs_type.need_to_convert(rhs_type))
+			{
+				nobj = lhs->convert(rhs->get_number_kind());
+				return bin_op(nobj, rhs, op);
+			}
+			else
+			{
+				nobj = rhs->convert(lhs->get_number_kind());
+				return bin_op(lhs, nobj, op);
+			}
 			throw Error("NumObj bin_op(const NumObj& lhs, const NumObj& rhs, OpKind op) not finished yet ");
 		}
 	}
@@ -146,10 +163,12 @@ namespace mcalcu
 	}
 	NumObj Integer::convert(NumberKind kind)
 	{
-		switch (get_number_kind())
+		switch (kind)
 		{
 		case INTEGER:
 			return Integer::from(value);
+		case FRACTION:
+			return Fraction::from(clone(), Integer::from(1));
 		default:
 			throw Error("failed to convert");
 		}
@@ -220,6 +239,11 @@ namespace mcalcu
 		return clone();
 	}
 
+	bool Fraction::single_number()
+	{
+		return denominator->single_number() && numerator->single_number();
+	}
+
 	NumObj Fraction::clone()
 	{
 		return Fraction::from(numerator->clone(), denominator->clone());
@@ -228,6 +252,36 @@ namespace mcalcu
 	long double Fraction::calcu()
 	{
 		return numerator->calcu() / denominator->calcu();
+	}
+
+	bool NumberType::need_to_convert(const NumberType& nk)
+	{
+		return level < nk.level;
+	}
+
+	NumObj Irrational::from(NumObj _base, NumObj _expo, NumObj _o)
+	{
+		return std::make_shared<Irrational>(_base, _expo);
+	}
+
+	std::string Irrational::to_string()
+	{
+		return "<Irrational: {" + base->to_string() + "},{" + expo->to_string() + "}>";
+	}
+
+	bool Irrational::single_number()
+	{
+		return base->single_number();
+	}
+
+	NumObj Irrational::clone()
+	{
+		auto res = from(base->clone(), expo->clone(),outer->clone());
+	}
+
+	long double Irrational::calcu()
+	{
+		return outer->calcu() * pow<long double>(base->calcu(), expo->calcu());
 	}
 
 }
