@@ -5,12 +5,7 @@ int main(){
     try
     {
         using namespace mcalcu;
-        auto a = Integer::from(123);
-        auto b = Integer::from(246);
-        auto c = Fraction::from(a, b);
-        auto d = Fraction::from(b, a);
-        d = d * c -d;
-        std::cout << d->to_string();
+        test_factor();
     }
     catch (mcalcu::Error& e)
     {

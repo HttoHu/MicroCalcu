@@ -10,7 +10,7 @@ namespace mcalcu
 	using NumObj = std::shared_ptr<Number>;
 	enum NumberKind
 	{
-		INTEGER, FRACTION, IRRATIONAL, COMPOUND
+		INTEGER, FRACTION, IRRATIONAL, COMPOUND,REAL,
 	};
 	enum OpKind
 	{
@@ -39,9 +39,9 @@ namespace mcalcu
 	class Number
 	{
 	public:
-		Number(NumberKind num_type) :number_type(num_type) {}
 		NumberKind get_number_kind()const { return number_type; }
 		// to print the number
+		bool operator==(const NumObj& num)const;
 		virtual std::string to_string() {
 			throw Error("method to_string() haven't been overrided");
 		}
@@ -54,7 +54,7 @@ namespace mcalcu
 		virtual NumObj simplify() {
 			throw Error("method simplify() haven't been overrided");
 		}
-		virtual long double calcu() {
+		virtual long double calcu() const{
 			throw Error("method calcu() haven't been overrided");
 		}
 		// to query wheter the object is a single number or made up with many number like (3+2^(-1/2)+4^(3/4))
@@ -66,13 +66,13 @@ namespace mcalcu
 	private:
 		NumberKind number_type;
 	};
-
+	bool operator==(const NumObj& a, const NumObj& b);
 	// common bin operator such as + ,- ,* ,/
 
 	NumObj bin_op(const NumObj& lhs, const NumObj& rhs, OpKind op);
 	// compare operation such as < > <= >= 
 	bool compare_op(const NumObj& lhs, const NumObj& rhs, OpKind op);
-
+	NumObj pow(const NumObj& num, int times);
 	NumObj operator+(const NumObj& lhs, const NumObj& rhs);
 	NumObj operator-(const NumObj& lhs, const NumObj& rhs);
 	NumObj operator*(const NumObj& lhs, const NumObj& rhs);
@@ -91,11 +91,24 @@ namespace mcalcu
 		NumObj simplify()override;
 		bool single_number()override { return true; }
 		NumObj clone()override;
-		long double calcu()override;
+		long double calcu()const override;
 
 
 	private:
 		long long value;
+	};
+	class Real : public Number {
+	public:
+		static NumObj from(long double v);
+
+		Real(long double _v) :Number(REAL),value(_v) {}
+		std::string to_string()override;
+		NumObj clone()override;
+		NumObj simplify()override { return clone(); }
+		long double calcu()const override { return value; }
+		bool single_number()override { return true; }
+	private:
+		long double value;
 	};
 
 	class Fraction :public Number
@@ -111,7 +124,7 @@ namespace mcalcu
 		NumObj simplify()override;
 		bool single_number()override;
 		NumObj clone()override;
-		long double calcu()override;
+		long double calcu()const override;
 
 
 		NumObj numerator;
@@ -124,10 +137,12 @@ namespace mcalcu
 		static NumObj from(NumObj _base, NumObj _expo, NumObj _o = Integer::from(1));
 		Irrational(NumObj _base, NumObj _expo,NumObj _o= Integer::from(1)) :Number(IRRATIONAL), base(_base), expo(_expo),
 			outer(_o) {}
+		NumObj convert(NumberKind kind)override;
+		NumObj simplify()override;
 		std::string to_string()override;
 		bool single_number()override;
 		NumObj clone()override;
-		long double calcu()override;
+		long double calcu()const override;
 	private:
 		NumObj base;
 		NumObj expo;
