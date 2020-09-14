@@ -324,6 +324,8 @@ namespace mcalcu
 				if (base->get_number_kind() == INTEGER)
 				{
 					factor(Integer::get_value(base),vec);
+					
+					auto 
 				}
 			}
 		}
