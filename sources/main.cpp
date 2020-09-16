@@ -5,7 +5,13 @@ int main(){
     try
     {
         using namespace mcalcu;
-        test_factor();
+        auto one = Integer::from(1);
+        auto two = Integer::from(2);
+        auto half = Fraction::from(one, two);
+        auto irr = Irrational::from(Integer::from(8), half, one->clone());
+        irr->simplify();
+        std::cout << irr->to_string();
+        //test_factor();
     }
     catch (mcalcu::Error& e)
     {

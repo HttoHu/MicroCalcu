@@ -26,7 +26,7 @@ namespace mcalcu
 		}
 		NumObj integer_div(const NumObj& lhs, const NumObj& rhs)
 		{
-			long long a = Integer::get_value(lhs),b= Integer::get_value(rhs);
+			long long a = Integer::get_value(lhs), b = Integer::get_value(rhs);
 			if (a % b == 0)
 				return Integer::from(a / b);
 			return Fraction::from(lhs, rhs);
@@ -57,30 +57,74 @@ namespace mcalcu
 			auto rhs_num = std::static_pointer_cast<Fraction> (rhs)->numerator;
 			auto lhs_deno = std::static_pointer_cast<Fraction> (lhs)->denominator;
 			auto rhs_deno = std::static_pointer_cast<Fraction> (rhs)->denominator;
-			return Fraction::from(lhs_num*rhs_num, rhs_deno*lhs_deno)->simplify();
+			return Fraction::from(lhs_num * rhs_num, rhs_deno * lhs_deno)->simplify();
 		}
 		NumObj fraction_div(const NumObj& lhs, const NumObj& rhs)
 		{
 			return fraction_mul(lhs, Fraction::reciprocal(rhs));
 		}
 
+		NumObj real_add(const NumObj& lhs, const NumObj& rhs) {
+			return Real::from(lhs->calcu() + rhs->calcu());
+		}
+
+		NumObj real_mul(const NumObj& lhs, const NumObj& rhs) {
+			return Real::from(lhs->calcu() * rhs->calcu());
+		}
+
+		NumObj real_div(const NumObj& lhs, const NumObj& rhs) {
+			return Real::from(lhs->calcu() / rhs->calcu());
+		}
+		NumObj real_sub(const NumObj& lhs, const NumObj& rhs) {
+			return Real::from(lhs->calcu() - rhs->calcu());
+		}
 		NumObj irrational_mul(const NumObj& lhs, const NumObj& rhs)
 		{
-			return nullptr;
+			auto left = std::static_pointer_cast<Irrational> (lhs), right = std::static_pointer_cast<Irrational>(rhs);
+			if (left->expo == right->expo)
+			{
+				auto new_base = left->base * right->base;
+				auto new_outer = left->outer * right->outer;
+				auto ret = Irrational::from(new_base,left->expo->clone(),new_outer);
+				return ret->simplify();
+			}
+			else if (left->base == right->base && left->outer == right->outer) {
+				auto new_expo = left->expo + right->expo;
+				return Irrational::from(left->base->clone(), new_expo, left->outer->clone()->simplify());
+			}
+			return Real::from(left->calcu() * right->calcu());
+		}
+		NumObj irrational_div(const NumObj& lhs, const NumObj& rhs)
+		{
+			auto left = std::static_pointer_cast<Irrational> (lhs), right = std::static_pointer_cast<Irrational>(rhs);
+			if (left->expo == right->expo)
+			{
+				auto new_base = left->base / right->base;
+				auto new_outer = left->outer / right->outer;
+				auto ret = Irrational::from(new_base, left->expo->clone(), new_outer);
+				return ret->simplify();
+			}
+			else if (left->base == right->base && left->outer == right->outer) {
+				auto new_expo = left->expo - right->expo;
+				return Irrational::from(left->base->clone(), new_expo, left->outer->clone()->simplify());
+			}
+			return Real::from(left->calcu() / right->calcu());
 		}
 		using BinOpFuncType = decltype(&integer_add);
 
 		std::map<std::pair<NumberKind, OpKind>, BinOpFuncType> bin_op_map
 		{
 			{{INTEGER,ADD},integer_add},{{INTEGER,SUB},integer_sub},{{INTEGER,MUL},integer_mul},{{INTEGER,DIV},integer_div},
-			{{FRACTION,ADD},fraction_add},{{FRACTION,SUB},fraction_sub},{{FRACTION,MUL},fraction_mul},{{FRACTION,DIV},fraction_div}
+			{{FRACTION,ADD},fraction_add},{{FRACTION,SUB},fraction_sub},{{FRACTION,MUL},fraction_mul},{{FRACTION,DIV},fraction_div},
+			{{REAL,ADD},real_add},{{REAL,SUB},real_sub,} ,{{ REAL,MUL }, real_mul},{{ REAL,DIV }, real_div},
+			{{IRRATIONAL,MUL},irrational_mul},{{IRRATIONAL,DIV},irrational_div},
 		};
 	}
 
 	std::string to_string(NumberKind nk)
 	{
 		std::map<NumberKind, std::string> table
-		{ 
+		{
 			{INTEGER,"int"},{FRACTION,"frac"},{IRRATIONAL,"irrational"},{COMPOUND,"compound"}
 		};
 		return table[nk];
@@ -105,7 +149,7 @@ namespace mcalcu
 		{// Remeber to do something to convert
 			auto result = op::bin_op_map.find({ lhs->get_number_kind(),op });
 			if (result == op::bin_op_map.end())
-				throw Error("{type:"+to_string(lhs->get_number_kind())+",op:"+to_string(op)+"} operation is not compatible.");
+				throw Error("{type:" + to_string(lhs->get_number_kind()) + ",op:" + to_string(op) + "} operation is not compatible.");
 			return result->second(lhs, rhs);
 		}
 		else
@@ -133,7 +177,7 @@ namespace mcalcu
 		else if (times == 1)
 			return num;
 		auto result = pow(num, times / 2);
-		if (times & 1) 
+		if (times & 1)
 			return result * result * num;
 		return result * result;
 	}
@@ -162,7 +206,7 @@ namespace mcalcu
 	{
 		return std::make_shared<Integer>(v);
 	}
-	
+
 	long long Integer::get_value(const NumObj& obj)
 	{
 		if (obj->get_number_kind() != INTEGER)
@@ -238,7 +282,7 @@ namespace mcalcu
 	{
 		switch (kind)
 		{
-		// Warning, accuracy may be lost
+			// Warning, accuracy may be lost
 		case mcalcu::INTEGER:
 			return Integer::from(calcu());
 		case mcalcu::FRACTION:
@@ -306,7 +350,13 @@ namespace mcalcu
 		expo->simplify();
 		base->simplify();
 		outer->simplify();
+		// to complex to calculate
+		if (!single_number())
+			return convert(REAL);
+
+
 		auto one = Integer::from(1);
+		// speical cases
 		if (base == one)
 			return outer;
 		else if (expo == one)
@@ -315,28 +365,45 @@ namespace mcalcu
 			return outer;
 		else if (expo->get_number_kind() == INTEGER)
 			return pow(clone(), Integer::get_value(expo));
+		// if the expo is a fraction, like 2^(1/2)
 		else if (expo->get_number_kind() == FRACTION)
 		{
 			auto expo_frac = std::static_pointer_cast<Fraction>(expo);
-			if (expo_frac->numerator == one)
+			if (expo_frac->numerator->get_number_kind() != INTEGER || expo_frac->denominator->get_number_kind() != INTEGER)
+				return convert(REAL);
+			if (expo_frac->numerator != one)
 			{
-				std::vector<long long> vec;
-				if (base->get_number_kind() == INTEGER)
-				{
-					factor(Integer::get_value(base),vec);
-					
-					auto 
-				}
+				long long times = Integer::get_value(expo_frac->numerator);
+				base = pow(base, times);
+				expo_frac->numerator = one->clone();
 			}
+			std::vector<long long> vec;
+			if (base->get_number_kind() == INTEGER && expo_frac->denominator->get_number_kind() == INTEGER)
+			{
+				long long times = Integer::get_value(expo_frac->denominator);
+				factor(Integer::get_value(base), vec);
+				std::vector<IntegerFrequency> freq = count_frency(vec);
+				// filter the elements whose frenquency is less than the times. 
+				freq = filter<IntegerFrequency>(freq.begin(), freq.end(), [=](const IntegerFrequency& a)
+					{
+						return a.second >= times;
+					});
+				for (auto& a : freq)
+				{
+					outer = outer * Integer::from(std::pow(a.first, a.second / times));
+					base = base / Integer::from(std::pow(a.first, (a.second / times) * times));
+				}
+				if (base == one)
+					return base->clone();
+			}
+			return clone();
 		}
-		if (!single_number())
-			return convert(REAL);
-		
+		return clone();
 	}
 
 	std::string Irrational::to_string()
 	{
-		return "<Irrational: {" + base->to_string() + "},{" + expo->to_string() + "}>";
+		return "<Irrational: {"+outer->to_string()+"},{" + base->to_string() + "},{" + expo->to_string() + "}>";
 	}
 
 	bool Irrational::single_number()
@@ -346,13 +413,13 @@ namespace mcalcu
 
 	NumObj Irrational::clone()
 	{
-		auto res = from(base->clone(), expo->clone(),outer->clone());
+		auto res = from(base->clone(), expo->clone(), outer->clone());
 		return res;
 	}
 
-	long double Irrational::calcu()const 
+	long double Irrational::calcu()const
 	{
-		return outer->calcu() * pow<long double>(base->calcu(), expo->calcu());
+		return outer->calcu() * std::pow<long double>(base->calcu(), expo->calcu());
 	}
 
 	NumObj Real::from(long double v)

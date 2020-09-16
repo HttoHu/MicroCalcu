@@ -30,7 +30,7 @@ namespace mcalcu
 			a /= ans;
 		}
 	}
-	std::vector<IntegerFrequency> count_frency(std::vector<long long>& vec)
+	std::vector<IntegerFrequency> count_frency(const std::vector<long long>& vec)
 	{
 		std::map<long long, int> table;
 		for (auto a : vec)

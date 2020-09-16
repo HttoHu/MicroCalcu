@@ -40,8 +40,8 @@ namespace mcalcu
 	{
 	public:
 		NumberKind get_number_kind()const { return number_type; }
+		Number(NumberKind nk) :number_type(nk) {}
 		// to print the number
-		bool operator==(const NumObj& num)const;
 		virtual std::string to_string() {
 			throw Error("method to_string() haven't been overrided");
 		}
@@ -143,9 +143,15 @@ namespace mcalcu
 		bool single_number()override;
 		NumObj clone()override;
 		long double calcu()const override;
-	private:
+
 		NumObj base;
 		NumObj expo;
 		NumObj outer;
+	};
+
+	class Compound : public Number {
+	public:
+	private:
+
 	};
 }

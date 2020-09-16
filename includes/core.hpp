@@ -10,7 +10,7 @@ namespace mcalcu
 	long long gcd(long long a, long long b);
 	void factor(long long a, std::vector<long long> & vec);
 	using IntegerFrequency = std::pair<long long, int>;
-	std::vector<IntegerFrequency> count_frency(std::vector<long long>& vec);
+	std::vector<IntegerFrequency> count_frency(const std::vector<long long>& vec);
 
 
 	template<typename EleType, typename It, typename FuncType>
